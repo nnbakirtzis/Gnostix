@@ -1,36 +1,118 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gnostix
+
+A minimalist second brain for CEOs, managers, and knowledge workers. Upload business documents and get instant AI-powered summaries, key points, and action items — all organized in one elegant interface.
+
+## Features
+
+- **AI Summarization** — Extracts summaries, key points, and action items from any document
+- **Multi-format support** — PDF, DOCX, TXT, and Markdown
+- **Folders** — Organize documents into color-coded folders
+- **Favorites** — Star important documents for quick access
+- **Search** — Real-time full-text search across all documents
+- **Export** — Copy or download summaries as Markdown
+
+## Tech Stack
+
+- [Next.js 15](https://nextjs.org/) (App Router)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [Prisma 7](https://www.prisma.io/) + [Turso (libSQL)](https://turso.tech/)
+- [Radix UI](https://www.radix-ui.com/) — accessible primitives
+- [Google Gemini](https://ai.google.dev/) or [Ollama](https://ollama.com/) for AI
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone and install
+
+```bash
+git clone https://github.com/YOUR_USERNAME/gnostix.git
+cd gnostix
+npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your values (see [Environment Variables](#environment-variables) below).
+
+### 3. Set up the database
+
+```bash
+npm run db:migrate
+npm run db:generate
+```
+
+### 4. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Description | Required |
+|---|---|---|
+| `AI_PROVIDER` | `gemini` or `ollama` | Yes |
+| `GEMINI_API_KEY` | API key from [Google AI Studio](https://aistudio.google.com/) | If using Gemini |
+| `DATABASE_URL` | Turso/libSQL connection URL | Yes |
+| `OLLAMA_BASE_URL` | Ollama server URL (default: `http://localhost:11434`) | If using Ollama |
+| `OLLAMA_MODEL` | Ollama model name (e.g. `llama3.2:3b`) | If using Ollama |
+| `OLLAMA_NUM_CTX` | Context window size (default: `8192`) | If using Ollama |
 
-## Learn More
+See `.env.example` for a full template.
 
-To learn more about Next.js, take a look at the following resources:
+## Using Ollama (Local AI)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If you prefer to run AI locally without an API key, use [Ollama](https://ollama.com/).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Install Ollama
 
-## Deploy on Vercel
+**macOS / Linux:**
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Windows:** Download the installer from [ollama.com](https://ollama.com/download).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 2. Pull a model
+
+```bash
+ollama pull llama3.2:3b       # Fast, lightweight (recommended for most machines)
+ollama pull llama3.2:7b       # Better quality, requires more RAM
+ollama pull mistral            # Good alternative
+```
+
+### 3. Start the Ollama server
+
+```bash
+ollama serve
+```
+
+By default it runs on `http://localhost:11434`. Set the following in your `.env.local`:
+
+```env
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_NUM_CTX=8192
+```
+
+> **Note:** Ollama must be running before you start Gnostix. Documents with lots of text may take longer to process depending on your hardware.
+
+## Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run db:migrate   # Run database migrations
+npm run db:generate  # Regenerate Prisma client
+npm run db:studio    # Open Prisma Studio
+```
+
+## License
+
+MIT
