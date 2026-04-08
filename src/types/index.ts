@@ -1,3 +1,11 @@
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  _count?: { documents: number };
+}
+
 export interface Folder {
   id: string;
   name: string;
@@ -21,8 +29,14 @@ export interface Document {
   folderId: string | null;
   folder: Folder | null;
   isFavorite: boolean;
+  tags: Tag[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
 }
 
 export function parseKeyPoints(doc: Document): string[] {

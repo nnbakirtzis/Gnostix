@@ -10,7 +10,8 @@ import {
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn, formatRelative, formatBytes, truncate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { Document, Folder } from "@/types";
+import { TagBadge } from "@/components/tags/TagBadge";
+import type { Document, Folder, Tag } from "@/types";
 
 const FILE_TYPE_ICONS: Record<string, string> = {
   pdf: "PDF",
@@ -22,6 +23,7 @@ const FILE_TYPE_ICONS: Record<string, string> = {
 interface DocumentCardProps {
   doc: Document;
   folders: Folder[];
+  allTags: Tag[];
   onToggleFavorite: (id: string, value: boolean) => void;
   onDelete: (id: string) => void;
   onMoveToFolder: (id: string, folderId: string | null) => void;
@@ -135,6 +137,15 @@ export function DocumentCard({
             />
             {doc.folder.name}
           </Badge>
+        </div>
+      )}
+
+      {/* Tag badges */}
+      {doc.tags.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {doc.tags.map((tag) => (
+            <TagBadge key={tag.id} tag={tag} asLink />
+          ))}
         </div>
       )}
 

@@ -15,6 +15,14 @@ model Folder {
   updatedAt DateTime   @updatedAt
 }
 
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  color     String
+  documents Document[] @relation("DocumentTags")
+  createdAt DateTime   @default(now())
+}
+
 model Document {
   id          String   @id @default(cuid())
   title       String
@@ -32,6 +40,7 @@ model Document {
   folderId    String?
   folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
   isFavorite  Boolean  @default(false)
+  tags        Tag[]    @relation("DocumentTags")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -2,11 +2,12 @@
 
 import { FileSearch } from "lucide-react";
 import { DocumentCard } from "./DocumentCard";
-import type { Document, Folder } from "@/types";
+import type { Document, Folder, Tag } from "@/types";
 
 interface DocumentGridProps {
   docs: Document[];
   folders: Folder[];
+  allTags: Tag[];
   loading: boolean;
   onToggleFavorite: (id: string, value: boolean) => void;
   onDelete: (id: string) => void;
@@ -16,6 +17,7 @@ interface DocumentGridProps {
 export function DocumentGrid({
   docs,
   folders,
+  allTags,
   loading,
   onToggleFavorite,
   onDelete,
@@ -55,6 +57,7 @@ export function DocumentGrid({
           key={doc.id}
           doc={doc}
           folders={folders}
+          allTags={allTags}
           onToggleFavorite={onToggleFavorite}
           onDelete={onDelete}
           onMoveToFolder={onMoveToFolder}

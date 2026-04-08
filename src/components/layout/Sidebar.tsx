@@ -4,19 +4,21 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FileText, Star, Plus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type Folder } from "@/types";
+import { type Folder, type Tag } from "@/types";
 
 interface SidebarProps {
   folders: Folder[];
+  tags: Tag[];
   docCounts: { total: number; favorites: number };
   onCreateFolder: () => void;
 }
 
-export function Sidebar({ folders, docCounts, onCreateFolder }: SidebarProps) {
+export function Sidebar({ folders, tags, docCounts, onCreateFolder }: SidebarProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeFolderId = searchParams.get("folder");
   const isFavorites = searchParams.get("favorites") === "true";
+  const activeTag = searchParams.get("tag");
 
   function navigate(params: Record<string, string | null>) {
     const sp = new URLSearchParams();
@@ -115,6 +117,41 @@ export function Sidebar({ folders, docCounts, onCreateFolder }: SidebarProps) {
                 <span className="text-xs text-[#6b5d4f]">
                   {folder._count?.documents ?? 0}
                 </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tags section */}
+        <div className="mt-4">
+          <div className="flex items-center px-3 py-1">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#6b5d4f]">
+              Tags
+            </span>
+          </div>
+          <div className="mt-1 space-y-0.5">
+            {tags.length === 0 && (
+              <p className="px-3 py-2 text-xs text-[#6b5d4f]">No tags yet</p>
+            )}
+            {tags.map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => navigate({ tag: tag.name })}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors cursor-pointer",
+                  activeTag === tag.name
+                    ? "border-l-2 border-[#b38f6f] bg-[rgba(179,143,111,0.08)] text-[#ede9e4] pl-[10px]"
+                    : "text-[#9e8f7f] hover:bg-[#1d1d1d] hover:text-[#ede9e4]"
+                )}
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                />
+                <span className="flex-1 truncate">{tag.name}</span>
+                {tag._count && tag._count.documents > 0 && (
+                  <span className="text-xs text-[#6b5d4f]">{tag._count.documents}</span>
+                )}
               </button>
             ))}
           </div>

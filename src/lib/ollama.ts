@@ -1,7 +1,7 @@
 import { Ollama } from "ollama";
 import type { SummaryResult } from "./gemini";
 
-const MAX_TEXT_CHARS = 24_000;
+const MAX_TEXT_CHARS = 90_000;
 
 function getClient() {
   return new Ollama({
@@ -10,7 +10,7 @@ function getClient() {
 }
 
 function getModel() {
-  return process.env.OLLAMA_MODEL ?? "llama3.2:11b";
+  return process.env.OLLAMA_MODEL ?? "gemma4:e2b";
 }
 
 export async function summarizeDocument(
@@ -52,7 +52,7 @@ export async function summarizeDocument(
         role: "user",
         content: `Summarize this document.
 
-Filename: ${filename}${truncated ? "\n(truncated to first 24,000 characters)" : ""}
+Filename: ${filename}${truncated ? "\n(truncated to first 90,000 characters)" : ""}
 
 - title: concise descriptive title (under 80 chars)
 - summary: executive summary in 2-3 paragraphs

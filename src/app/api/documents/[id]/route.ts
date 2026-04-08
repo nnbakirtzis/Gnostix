@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { tagColor, normalizeTag } from "@/lib/tags";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -12,7 +13,7 @@ export async function GET(
   const { id } = await params;
   const doc = await prisma.document.findUnique({
     where: { id },
-    include: { folder: true },
+    include: { folder: true, tags: true },
   });
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(doc);
@@ -27,7 +28,30 @@ export async function PATCH(
     isFavorite?: boolean;
     folderId?: string | null;
     title?: string;
+    tagNames?: string[];
   };
+
+  // Handle tag replacement separately (requires upserts + set)
+  if (body.tagNames !== undefined) {
+    const normalized = body.tagNames
+      .map(normalizeTag)
+      .filter((n) => n.length > 0 && n.length <= 50);
+
+    const upserted = await Promise.all(
+      normalized.map((name) =>
+        prisma.tag.upsert({
+          where: { name },
+          update: {},
+          create: { name, color: tagColor(name) },
+        })
+      )
+    );
+
+    await prisma.document.update({
+      where: { id },
+      data: { tags: { set: upserted.map((t) => ({ id: t.id })) } },
+    });
+  }
 
   const doc = await prisma.document.update({
     where: { id },
@@ -36,7 +60,7 @@ export async function PATCH(
       ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
       ...(body.title ? { title: body.title } : {}),
     },
-    include: { folder: true },
+    include: { folder: true, tags: true },
   });
 
   return NextResponse.json(doc);

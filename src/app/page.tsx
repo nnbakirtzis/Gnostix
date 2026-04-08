@@ -10,7 +10,7 @@ import { UploadModal } from "@/components/documents/UploadModal";
 import { CreateFolderModal } from "@/components/folders/CreateFolderModal";
 import { SearchBar } from "@/components/documents/SearchBar";
 import { Button } from "@/components/ui/button";
-import type { Document, Folder } from "@/types";
+import type { Document, Folder, Tag } from "@/types";
 
 export default function DashboardPage() {
   return (
@@ -24,9 +24,11 @@ function Dashboard() {
   const searchParams = useSearchParams();
   const folderId = searchParams.get("folder");
   const favorites = searchParams.get("favorites") === "true";
+  const tagParam = searchParams.get("tag");
 
   const [docs, setDocs] = useState<Document[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
@@ -37,6 +39,12 @@ function Dashboard() {
     setFolders(await res.json());
   }, []);
 
+  // Fetch tags
+  const fetchTags = useCallback(async () => {
+    const res = await fetch("/api/tags");
+    setTags(await res.json());
+  }, []);
+
   // Fetch documents based on active filter
   const fetchDocs = useCallback(async () => {
     setLoadingDocs(true);
@@ -44,16 +52,18 @@ function Dashboard() {
       const params = new URLSearchParams();
       if (folderId) params.set("folderId", folderId);
       if (favorites) params.set("favorites", "true");
+      if (tagParam) params.set("tag", tagParam);
       const res = await fetch(`/api/documents?${params}`);
       setDocs(await res.json());
     } finally {
       setLoadingDocs(false);
     }
-  }, [folderId, favorites]);
+  }, [folderId, favorites, tagParam]);
 
   useEffect(() => {
     fetchFolders();
-  }, [fetchFolders]);
+    fetchTags();
+  }, [fetchFolders, fetchTags]);
 
   useEffect(() => {
     fetchDocs();
@@ -115,12 +125,15 @@ function Dashboard() {
     ? "Favorites"
     : activeFolder
     ? activeFolder.name
+    : tagParam
+    ? `#${tagParam}`
     : "All Documents";
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#161616]">
       <Sidebar
         folders={folders}
+        tags={tags}
         docCounts={{ total: totalDocs, favorites: favCount }}
         onCreateFolder={() => setCreateFolderOpen(true)}
       />
@@ -148,6 +161,7 @@ function Dashboard() {
           <DocumentGrid
             docs={docs}
             folders={folders}
+            allTags={tags}
             loading={loadingDocs}
             onToggleFavorite={handleToggleFavorite}
             onDelete={handleDelete}

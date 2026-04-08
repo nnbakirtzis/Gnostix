@@ -15,13 +15,18 @@ import {
   Sparkles,
   FolderInput,
   AlertTriangle,
+  Tag as TagIcon,
+  MessageSquare,
 } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TagInput } from "@/components/tags/TagInput";
+import { TagBadge } from "@/components/tags/TagBadge";
+import { ChatPanel } from "@/components/documents/ChatPanel";
 import { cn, formatDate, formatBytes } from "@/lib/utils";
 import { parseKeyPoints, parseActionItems } from "@/types";
-import type { Document, Folder } from "@/types";
+import type { Document, Folder, Tag } from "@/types";
 
 const FILE_TYPE_LABELS: Record<string, string> = {
   pdf: "PDF",
@@ -33,14 +38,18 @@ const FILE_TYPE_LABELS: Record<string, string> = {
 interface DocumentDetailProps {
   doc: Document;
   folders: Folder[];
+  allTags: Tag[];
+  onNewTagCreated?: () => void;
 }
 
-export function DocumentDetail({ doc, folders }: DocumentDetailProps) {
+export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: DocumentDetailProps) {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(doc.isFavorite);
   const [currentDoc, setCurrentDoc] = useState(doc);
+  const [currentTags, setCurrentTags] = useState<Tag[]>(doc.tags);
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const keyPoints = parseKeyPoints(currentDoc);
   const actionItems = parseActionItems(currentDoc);
@@ -216,6 +225,16 @@ export function DocumentDetail({ doc, folders }: DocumentDetailProps) {
           </DropdownMenu.Root>
 
           <Button
+            variant={chatOpen ? "default" : "outline"}
+            size="sm"
+            onClick={() => setChatOpen(!chatOpen)}
+            title="Chat about this document"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Chat
+          </Button>
+
+          <Button
             variant="destructive"
             size="sm"
             onClick={handleDelete}
@@ -248,6 +267,9 @@ export function DocumentDetail({ doc, folders }: DocumentDetailProps) {
               </Badge>
             </>
           )}
+          {currentTags.map((tag) => (
+            <TagBadge key={tag.id} tag={tag} asLink />
+          ))}
         </div>
         <h1
           className="text-2xl font-bold tracking-tight text-[#ede9e4]"
@@ -256,6 +278,28 @@ export function DocumentDetail({ doc, folders }: DocumentDetailProps) {
           {currentDoc.title}
         </h1>
         <p className="mt-1 text-sm text-[#6b5d4f]">{currentDoc.fileName}</p>
+      </div>
+
+      {/* Tags */}
+      <div className="mb-6">
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[rgba(179,143,111,0.08)]">
+            <TagIcon className="h-3.5 w-3.5 text-[#b38f6f]" />
+          </div>
+          <h2
+            className="text-sm font-semibold uppercase tracking-wider text-[#9e8f7f]"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            Tags
+          </h2>
+        </div>
+        <TagInput
+          docId={doc.id}
+          initialTags={currentTags}
+          allTags={allTags}
+          onTagsChange={setCurrentTags}
+          onNewTagCreated={onNewTagCreated}
+        />
       </div>
 
       {/* Error state */}
@@ -367,6 +411,9 @@ export function DocumentDetail({ doc, folders }: DocumentDetailProps) {
             </section>
           )}
         </div>
+      )}
+      {chatOpen && (
+        <ChatPanel docId={doc.id} onClose={() => setChatOpen(false)} />
       )}
     </div>
   );
