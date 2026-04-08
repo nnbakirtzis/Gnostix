@@ -1,6 +1,6 @@
 # Gnostix
 
-![Gnostix Logo](gnostix_logo.jpg)
+![Gnostix Logo](gnostix_logo_cropped.jpg)
 
 A minimalist second brain for CEOs, managers, and knowledge workers. Upload business documents and get instant AI-powered summaries, key points, and action items — all organized in one elegant interface.
 
