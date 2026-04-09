@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Tag as TagIcon,
   MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import { ChatPanel } from "@/components/documents/ChatPanel";
 import { cn, formatDate, formatBytes } from "@/lib/utils";
 import { parseKeyPoints, parseActionItems } from "@/types";
 import type { Document, Folder, Tag } from "@/types";
+import type { SummaryStyle } from "@/lib/summarize";
 
 const FILE_TYPE_LABELS: Record<string, string> = {
   pdf: "PDF",
@@ -50,6 +52,7 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [resummaryLoading, setResummaryLoading] = useState(false);
 
   const keyPoints = parseKeyPoints(currentDoc);
   const actionItems = parseActionItems(currentDoc);
@@ -79,6 +82,23 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
     setDeleting(true);
     await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
     router.push("/");
+  }
+
+  async function handleResummarize(style: SummaryStyle) {
+    setResummaryLoading(true);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style }),
+      });
+      if (res.ok) {
+        const updated = await res.json() as Document;
+        setCurrentDoc(updated);
+      }
+    } finally {
+      setResummaryLoading(false);
+    }
   }
 
   function buildMarkdown(): string {
@@ -224,6 +244,33 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
 
+          {/* Re-summarize */}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <Button variant="outline" size="sm" disabled={resummaryLoading}>
+                <RefreshCw className={cn("h-3.5 w-3.5", resummaryLoading && "animate-spin")} />
+                {resummaryLoading ? "Analyzing…" : "Re-summarize"}
+              </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                className="z-50 min-w-[160px] rounded-lg border border-[#2e2e2e] bg-[#1d1d1d] p-1 shadow-xl"
+                sideOffset={4}
+                align="end"
+              >
+                {(["executive", "academic", "simple", "casual"] as SummaryStyle[]).map((s) => (
+                  <DropdownMenu.Item
+                    key={s}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-[#9e8f7f] hover:bg-[#2e2e2e] hover:text-[#ede9e4] capitalize outline-none"
+                    onSelect={() => handleResummarize(s)}
+                  >
+                    {s}
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+
           <Button
             variant={chatOpen ? "default" : "outline"}
             size="sm"
@@ -357,8 +404,8 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
           {keyPoints.length > 0 && (
             <section>
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600/15">
-                  <ListChecks className="h-3.5 w-3.5 text-blue-400" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[rgba(179,143,111,0.12)]">
+                  <ListChecks className="h-3.5 w-3.5 text-[#b38f6f]" />
                 </div>
                 <h2
                   className="text-sm font-semibold uppercase tracking-wider text-[#9e8f7f]"
@@ -371,7 +418,7 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
                 <ul className="space-y-2.5">
                   {keyPoints.map((point, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600/15 text-[10px] font-bold text-blue-400">
+                      <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#b38f6f]/25 bg-[rgba(179,143,111,0.12)] text-[10px] font-bold text-[#c9a882]">
                         {i + 1}
                       </span>
                       <p className="text-sm leading-relaxed text-[#9e8f7f]">{point}</p>
@@ -386,8 +433,8 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
           {actionItems.length > 0 && (
             <section>
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-600/15">
-                  <CheckSquare className="h-3.5 w-3.5 text-emerald-400" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-[#c9a882]/25 bg-[rgba(201,168,130,0.1)]">
+                  <CheckSquare className="h-3.5 w-3.5 text-[#c9a882]" />
                 </div>
                 <h2
                   className="text-sm font-semibold uppercase tracking-wider text-[#9e8f7f]"
@@ -400,8 +447,8 @@ export function DocumentDetail({ doc, folders, allTags, onNewTagCreated }: Docum
                 <ul className="space-y-2.5">
                   {actionItems.map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-emerald-700 bg-emerald-900/20">
-                        <Check className="h-2.5 w-2.5 text-emerald-400" />
+                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[#b38f6f]/35 bg-[rgba(179,143,111,0.08)]">
+                        <Check className="h-2.5 w-2.5 text-[#b38f6f]" />
                       </div>
                       <p className="text-sm leading-relaxed text-[#9e8f7f]">{item}</p>
                     </li>

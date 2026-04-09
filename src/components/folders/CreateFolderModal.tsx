@@ -10,17 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const PRESET_COLORS = [
-  "#b38f6f", // sand
-  "#3b82f6", // blue
-  "#10b981", // emerald
-  "#f59e0b", // amber
-  "#ef4444", // red
-  "#ec4899", // pink
-  "#06b6d4", // cyan
-  "#84cc16", // lime
-];
+import { TAG_COLORS as PRESET_COLORS } from "@/lib/tags";
 
 interface CreateFolderModalProps {
   open: boolean;
