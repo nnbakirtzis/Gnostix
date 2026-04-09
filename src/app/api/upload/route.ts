@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { summarizeDocument } from "@/lib/summarize";
+import { summarizeDocument, type SummaryStyle } from "@/lib/summarize";
 import { chunkAndEmbedDocument } from "@/lib/indexing";
 import { parseDocument, getFileType } from "@/lib/parsers";
 import path from "node:path";
@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const rawStyle = formData.get("style") as string | null;
+    const validStyles: SummaryStyle[] = ["executive", "academic", "simple", "casual"];
+    const style: SummaryStyle = validStyles.includes(rawStyle as SummaryStyle)
+      ? (rawStyle as SummaryStyle)
+      : "executive";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -78,7 +83,7 @@ export async function POST(req: NextRequest) {
     // Summarize with AI provider
     let summary;
     try {
-      summary = await summarizeDocument(extractedText, file.name);
+      summary = await summarizeDocument(extractedText, file.name, style);
     } catch (err) {
       console.error("[upload/ai]", err);
       await prisma.document.update({

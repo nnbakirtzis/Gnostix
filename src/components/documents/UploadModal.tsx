@@ -13,6 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn, formatBytes } from "@/lib/utils";
 import type { Document } from "@/types";
+import type { SummaryStyle } from "@/lib/summarize";
+
+const STYLES: { id: SummaryStyle; label: string; icon: string; description: string }[] = [
+  { id: "executive", label: "Executive Brief", icon: "💼", description: "Concise & action-oriented" },
+  { id: "academic",  label: "Academic",        icon: "🎓", description: "Formal & thorough" },
+  { id: "simple",   label: "Plain Language",   icon: "💬", description: "Simple & clear" },
+  { id: "casual",   label: "Casual",           icon: "☕", description: "Warm & conversational" },
+];
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -35,6 +43,7 @@ export function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [summaryStyle, setSummaryStyle] = useState<SummaryStyle>("executive");
   const inputRef = useRef<HTMLInputElement>(null);
 
   function validateFile(f: File): string | null {
@@ -75,6 +84,7 @@ export function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("style", summaryStyle);
       const res = await fetch("/api/upload", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
@@ -93,6 +103,7 @@ export function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
     if (uploading) return;
     setFile(null);
     setError("");
+    setSummaryStyle("executive");
     onClose();
   }
 
@@ -164,6 +175,35 @@ export function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
           )}
         </div>
 
+        {/* Summary style picker */}
+        <div>
+          <p className="mb-2 text-xs font-medium text-[#9e8f7f]">Summary style</p>
+          <div className="grid grid-cols-2 gap-2">
+            {STYLES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={uploading}
+                onClick={() => setSummaryStyle(s.id)}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                  summaryStyle === s.id
+                    ? "border-[#b38f6f] bg-[rgba(179,143,111,0.1)]"
+                    : "border-[#2e2e2e] bg-[#1d1d1d] hover:border-[#b38f6f]/40 hover:bg-[#242424]"
+                )}
+              >
+                <span className="text-lg leading-none">{s.icon}</span>
+                <div>
+                  <p className={cn("text-xs font-medium", summaryStyle === s.id ? "text-[#c9a882]" : "text-[#9e8f7f]")}>
+                    {s.label}
+                  </p>
+                  <p className="text-[10px] text-[#6b5d4f]">{s.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Processing note */}
         {uploading && (
           <div className="flex items-center justify-center gap-2.5 rounded-lg border border-[#b38f6f]/20 bg-[rgba(179,143,111,0.05)] px-3 py-2.5">
@@ -187,7 +227,7 @@ export function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
+        <div className="flex justify-center gap-2 pt-1">
           <Button variant="ghost" onClick={handleClose} disabled={uploading}>
             Cancel
           </Button>
