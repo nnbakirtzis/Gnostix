@@ -166,7 +166,7 @@ export function UploadModal({ open, onClose, onUploaded }: UploadModalProps) {
 
         {/* Processing note */}
         {uploading && (
-          <div className="flex items-center gap-2.5 rounded-lg border border-[#b38f6f]/20 bg-[rgba(179,143,111,0.05)] px-3 py-2.5">
+          <div className="flex items-center justify-center gap-2.5 rounded-lg border border-[#b38f6f]/20 bg-[rgba(179,143,111,0.05)] px-3 py-2.5">
             <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#b38f6f] border-t-transparent" />
             <div>
               <p className="text-xs font-medium text-[#c9a882]">

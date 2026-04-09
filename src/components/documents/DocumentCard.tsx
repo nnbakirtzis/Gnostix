@@ -140,10 +140,10 @@ export function DocumentCard({
         </div>
       )}
 
-      {/* Tag badges */}
-      {doc.tags.length > 0 && (
+      {/* Tag badges (tags omitted e.g. from upload response until refetch) */}
+      {(doc.tags ?? []).length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
-          {doc.tags.map((tag) => (
+          {(doc.tags ?? []).map((tag) => (
             <TagBadge key={tag.id} tag={tag} asLink />
           ))}
         </div>

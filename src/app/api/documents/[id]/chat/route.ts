@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { chatWithDocument } from "@/lib/chat";
+import { retrieveRelevantChunks, type RetrievedChunk } from "@/lib/retrieval";
 import { parseDocument, getFileType } from "@/lib/parsers";
 import type { ChatMessage } from "@/types";
 import fs from "node:fs/promises";
@@ -24,30 +25,45 @@ export async function POST(
     return NextResponse.json({ error: "No messages" }, { status: 400 });
   }
 
-  // Parse document content from disk
-  const fileType = getFileType(doc.fileName);
-  if (!fileType) {
-    return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+  // Use the last user message as the retrieval query.
+  const lastUserMsg =
+    [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+
+  let retrieved: RetrievedChunk[] = [];
+  if (doc.chunkCount > 0 && lastUserMsg) {
+    try {
+      retrieved = await retrieveRelevantChunks(doc.id, lastUserMsg, { k: 4 });
+    } catch (err) {
+      console.error("[chat/retrieval]", err);
+    }
   }
 
-  const filePath = path.isAbsolute(doc.filePath)
-    ? doc.filePath
-    : path.join(process.cwd(), doc.filePath);
-
-  let documentText: string;
-  try {
-    const buffer = await fs.readFile(filePath);
-    documentText = await parseDocument(buffer, fileType);
-  } catch {
-    return NextResponse.json({ error: "Could not read document file" }, { status: 500 });
+  // Fallback for pre-RAG documents (chunkCount=0) or retrieval failure:
+  // read + parse the file on demand, same as the pre-RAG behavior.
+  let fallbackText: string | null = null;
+  if (retrieved.length === 0) {
+    const fileType = getFileType(doc.fileName);
+    if (!fileType) {
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+    }
+    const filePath = path.isAbsolute(doc.filePath)
+      ? doc.filePath
+      : path.join(process.cwd(), doc.filePath);
+    try {
+      const buffer = await fs.readFile(filePath);
+      fallbackText = await parseDocument(buffer, fileType);
+    } catch {
+      return NextResponse.json({ error: "Could not read document file" }, { status: 500 });
+    }
   }
 
-  const generator = chatWithDocument(
-    documentText,
-    doc.title,
-    doc.summary,
-    messages
-  );
+  const generator = chatWithDocument({
+    title: doc.title,
+    summary: doc.summary,
+    retrievedChunks: retrieved,
+    fallbackText,
+    messages,
+  });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

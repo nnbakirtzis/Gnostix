@@ -1,102 +1,64 @@
-import { GoogleGenAI } from "@google/genai";
-import { Ollama } from "ollama";
+import { streamText } from "ai";
+import { chatModel } from "./ai";
 import type { ChatMessage } from "@/types";
+import type { RetrievedChunk } from "./retrieval";
 
-const GEMINI_MAX_CHARS = 100_000;
-const OLLAMA_MAX_CHARS = 90_000;
+// Only used for the legacy fallback path (pre-RAG documents with chunkCount=0).
+const FALLBACK_MAX_CHARS = 90_000;
 
-function buildSystemPrompt(
-  title: string,
-  summary: string | null,
-  documentText: string
-): string {
-  return `You are a helpful assistant for analyzing documents. The user is viewing a document titled "${title}".${
-    summary ? `\n\nHere is a brief summary of the document:\n${summary}` : ""
+type ChatArgs = {
+  title: string;
+  summary: string | null;
+  retrievedChunks: RetrievedChunk[];
+  fallbackText: string | null;
+  messages: ChatMessage[];
+};
+
+function buildSystemPrompt(args: Omit<ChatArgs, "messages">): string {
+  const { title, summary, retrievedChunks, fallbackText } = args;
+  const header =
+    `You are a helpful assistant for analyzing a document titled "${title}".` +
+    (summary ? `\n\nDocument summary:\n${summary}` : "");
+
+  if (retrievedChunks.length > 0) {
+    const excerpts = retrievedChunks
+      .map((c) => `[#${c.ordinal}] ${c.text}`)
+      .join("\n\n");
+    return `${header}
+
+Below are the most relevant excerpts from the document for the current question.
+Each excerpt is labeled with its position in the document (e.g. [#12]).
+Answer based only on these excerpts and the summary. If the answer is not
+contained in them, say so. When helpful, cite excerpt numbers in brackets.
+
+--- RELEVANT EXCERPTS ---
+${excerpts}
+--- END EXCERPTS ---`;
   }
+
+  // Fallback: pre-RAG documents (chunkCount=0) or embedding failure.
+  const truncated = (fallbackText ?? "").slice(0, FALLBACK_MAX_CHARS);
+  return `${header}
 
 Answer questions about this document based on its content below. Be concise and helpful.
 
 --- DOCUMENT CONTENT ---
-${documentText}
+${truncated}
 --- END DOCUMENT ---`;
 }
 
-async function* geminiChat(
-  documentText: string,
-  title: string,
-  summary: string | null,
-  messages: ChatMessage[]
-): AsyncGenerator<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-
-  const client = new GoogleGenAI({ apiKey });
-  const truncated = documentText.slice(0, GEMINI_MAX_CHARS);
-  const systemPrompt = buildSystemPrompt(title, summary, truncated);
-
-  const contents = messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
-
-  const response = await client.models.generateContentStream({
-    model: "gemini-2.0-flash",
-    contents,
-    config: {
-      systemInstruction: systemPrompt,
-    },
-  });
-
-  for await (const chunk of response) {
-    const text = chunk.text;
-    if (text) yield text;
-  }
-}
-
-async function* ollamaChat(
-  documentText: string,
-  title: string,
-  summary: string | null,
-  messages: ChatMessage[]
-): AsyncGenerator<string> {
-  const ollama = new Ollama({
-    host: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
-  });
-  const model = process.env.OLLAMA_MODEL ?? "gemma4:e2b";
-  const truncated = documentText.slice(0, OLLAMA_MAX_CHARS);
-  const systemPrompt = buildSystemPrompt(title, summary, truncated);
-
-  const ollamaMessages = [
-    { role: "system" as const, content: systemPrompt },
-    ...messages.map((m) => ({
-      role: m.role as "user" | "assistant",
+/**
+ * Stream a chat response for a document. Returns an async iterable of text
+ * chunks so callers can pipe it directly into a ReadableStream.
+ */
+export function chatWithDocument(args: ChatArgs): AsyncIterable<string> {
+  const result = streamText({
+    model: chatModel,
+    system: buildSystemPrompt(args),
+    messages: args.messages.map((m) => ({
+      role: m.role,
       content: m.content,
     })),
-  ];
-
-  const response = await ollama.chat({
-    model,
-    stream: true,
-    options: {
-      num_ctx: +(process.env.OLLAMA_NUM_CTX ?? "8192"),
-    },
-    messages: ollamaMessages,
   });
-
-  for await (const chunk of response) {
-    const text = chunk.message.content;
-    if (text) yield text;
-  }
-}
-
-export function chatWithDocument(
-  documentText: string,
-  title: string,
-  summary: string | null,
-  messages: ChatMessage[]
-): AsyncGenerator<string> {
-  const provider = process.env.AI_PROVIDER ?? "gemini";
-  return provider === "ollama"
-    ? ollamaChat(documentText, title, summary, messages)
-    : geminiChat(documentText, title, summary, messages);
+  return result.textStream;
 }

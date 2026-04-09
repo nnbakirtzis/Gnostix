@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { summarizeDocument } from "@/lib/summarize";
+import { chunkAndEmbedDocument } from "@/lib/indexing";
 import { parseDocument, getFileType } from "@/lib/parsers";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -110,8 +111,16 @@ export async function POST(req: NextRequest) {
         actionItems: JSON.stringify(summary.actionItems),
         status: "done",
       },
-      include: { folder: true },
+      include: { folder: true, tags: true },
     });
+
+    // Chunk + embed for RAG. Non-fatal: if this fails the document still
+    // lands as "done" with chunkCount=0, and chat falls back to full-text.
+    try {
+      await chunkAndEmbedDocument(doc.id, extractedText);
+    } catch (err) {
+      console.error("[upload/index]", err);
+    }
 
     return NextResponse.json(updated, { status: 201 });
   } catch (err) {

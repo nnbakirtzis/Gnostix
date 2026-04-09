@@ -1,9 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider   = "postgresql"
+  extensions = [vector]
 }
 
 model Folder {
@@ -24,24 +26,49 @@ model Tag {
 }
 
 model Document {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   title       String
   fileName    String
   fileType    String
   fileSize    Int
   filePath    String
 
-  status      String   @default("pending")
+  status      String          @default("pending")
 
   summary     String?
   keyPoints   String?
   actionItems String?
 
   folderId    String?
-  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  isFavorite  Boolean  @default(false)
-  tags        Tag[]    @relation("DocumentTags")
+  folder      Folder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  isFavorite  Boolean         @default(false)
+  tags        Tag[]           @relation("DocumentTags")
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  chunks      DocumentChunk[]
+  chunkCount  Int             @default(0)
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  ordinal    Int
+  charStart  Int
+  charEnd    Int
+  text       String
+  tokenCount Int
+
+  // pgvector column — written/read via raw SQL ($executeRaw / $queryRaw).
+  embedding  Unsupported("vector(768)")
+  embedModel String
+  embedDim   Int      @default(768)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([documentId, ordinal])
+  @@index([documentId])
 }

@@ -19,22 +19,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(cached.data);
   }
 
-  // Sanitize query: strip FTS5 special chars, add prefix wildcard for last term
-  const sanitized = q.replace(/["*()\-]/g, " ").trim();
-  const terms = sanitized.split(/\s+/).filter(Boolean);
-  const ftsQuery = terms.length
-    ? terms.slice(0, -1).join(" ") + (terms.length > 1 ? " " : "") + terms[terms.length - 1] + "*"
-    : "";
-
   let docs: unknown[];
 
   try {
-    // FTS5: get relevance-ranked document IDs
-    // bm25 weights: id=0 (unindexed), title=10, summary=5, fileName=1
-    const ranked = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM document_fts
-      WHERE document_fts MATCH ${ftsQuery}
-      ORDER BY bm25(document_fts, 0, 10, 5, 1)
+    // Postgres FTS: get relevance-ranked document IDs using the
+    // generated `search_tsv` tsvector column + GIN index.
+    // Weights applied at column generation: title=A, summary=B, fileName=C.
+    const ranked = await prisma.$queryRaw<{ id: string; rank: number }[]>`
+      SELECT id, ts_rank_cd(search_tsv, plainto_tsquery('english', ${q})) AS rank
+      FROM "Document"
+      WHERE search_tsv @@ plainto_tsquery('english', ${q})
+      ORDER BY rank DESC
       LIMIT 50
     `;
 
@@ -49,17 +44,18 @@ export async function GET(req: NextRequest) {
       include: { folder: true },
     });
 
-    // Re-order to match FTS5 rank order
+    // Re-order to match rank order from the FTS query
     const docMap = new Map(docsById.map((d) => [d.id, d]));
     docs = ids.map((id) => docMap.get(id)).filter(Boolean);
-  } catch {
-    // Fallback to LIKE search if FTS5 table isn't ready
+  } catch (err) {
+    console.error("[search]", err);
+    // Fallback to ILIKE search if the FTS column isn't ready
     docs = await prisma.document.findMany({
       where: {
         OR: [
-          { title: { contains: q } },
-          { summary: { contains: q } },
-          { fileName: { contains: q } },
+          { title: { contains: q, mode: "insensitive" } },
+          { summary: { contains: q, mode: "insensitive" } },
+          { fileName: { contains: q, mode: "insensitive" } },
         ],
       },
       include: { folder: true },

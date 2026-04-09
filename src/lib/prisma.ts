@@ -1,21 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "node:path";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-function getDbUrl(): string {
-  const raw = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-  if (raw.startsWith("file:./") || raw.startsWith("file:../")) {
-    return "file:" + path.resolve(process.cwd(), raw.replace("file:", ""));
-  }
-  return raw;
-}
+// Prisma 7 requires an adapter for direct DB connections. PrismaPg wraps
+// node-postgres and reads the connection string from DATABASE_URL.
+const adapter = new PrismaPg(process.env.DATABASE_URL!);
 
-function makePrismaClient() {
-  const adapter = new PrismaLibSql({ url: getDbUrl() });
-  return new PrismaClient({ adapter });
-}
-
-// Singleton pattern — reuse in dev to avoid exhausting connections
+// Singleton pattern — reuse in dev to avoid exhausting connections.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-export const prisma = globalForPrisma.prisma ?? makePrismaClient();
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
