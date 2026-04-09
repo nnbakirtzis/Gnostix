@@ -14,7 +14,7 @@ import type { Document, Folder, Tag } from "@/types";
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-[#161616]" />}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-transparent" />}>
       <Dashboard />
     </Suspense>
   );
@@ -130,7 +130,7 @@ function Dashboard() {
     : "All Documents";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#161616]">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       <Sidebar
         folders={folders}
         tags={tags}

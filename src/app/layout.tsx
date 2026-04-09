@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { AppBackground } from "@/components/layout/AppBackground";
 
 export const metadata: Metadata = {
   title: "Gnostix — AI Document Summarizer",
@@ -15,8 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        {children}
+      <body className="relative min-h-full">
+        <AppBackground />
+        <div className="relative z-10 min-h-full">{children}</div>
         <Toaster
           theme="dark"
           position="bottom-right"

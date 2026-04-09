@@ -25,7 +25,7 @@ export default async function DocumentPage({ params }: Props) {
   if (!doc) notFound();
 
   return (
-    <div className="min-h-screen bg-[#161616]">
+    <div className="min-h-screen bg-transparent">
       <DocumentDetail
         doc={doc as unknown as Document}
         folders={folders as unknown as Folder[]}
